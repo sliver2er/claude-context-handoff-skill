@@ -58,10 +58,9 @@ When the tool returns or writes handoff metadata:
 ## Recommended workflow
 
 1. Install the skill with `npx github:sliver2er/claude-context-handoff-skill install-skill --yes`.
-2. In the source repo, run `npx github:sliver2er/claude-context-handoff-skill save --source <source-repo>`.
-3. In the target repo, run `npx github:sliver2er/claude-context-handoff-skill apply --target <target-repo>`.
-4. Read `.claude/context-handoffs/<handoff-id>.json` and `.md`.
-5. Prepend or summarize the `instructionBlock` when starting the new Claude conversation.
+2. Prefer `npx github:sliver2er/claude-context-handoff-skill start --source <source-repo> --target <target-repo>` when the goal is to open Claude directly in the target repository.
+3. Use `save` and `apply` separately only when the user wants a staged handoff workflow.
+4. Read `.claude/context-handoffs/<handoff-id>.json` and `.md` if you need to inspect or explain what was handed off.
 
 ## Example user utterances
 

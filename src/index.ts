@@ -18,6 +18,10 @@ export {
   installSkillFiles,
 } from './install.js';
 export {
+  buildClaudeLaunchCommand,
+  launchClaudeInNewTerminal,
+} from './launch.js';
+export {
   copyClaudeContent,
   targetHasSupportedClaudeConflicts,
 } from './transfer.js';

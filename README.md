@@ -72,6 +72,14 @@ npx github:sliver2er/claude-context-handoff-skill save --source /path/to/source-
 
 This command shows available conversations and stores the selected session transcript plus metadata under `~/.claude-context-handoff/handoffs/<handoff-id>/`.
 
+## Usage: start Claude directly in the target repo
+
+```bash
+npx github:sliver2er/claude-context-handoff-skill start --source /path/to/source-repo --target /path/to/target-repo
+```
+
+This command saves a handoff, applies it in the target repo, and on macOS opens a new Terminal window that starts Claude Code in the target repository with the handoff metadata loaded first.
+
 ## Usage: apply a handoff in the target repo
 
 ```bash

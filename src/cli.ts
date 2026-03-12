@@ -7,6 +7,7 @@ import { Command } from 'commander';
 
 import {
   applyHandoff,
+  buildClaudeLaunchCommand,
   copyClaudeContent,
   ensureExtractorAvailable,
   exportConversation,
@@ -14,6 +15,7 @@ import {
   getGlobalSkillRoot,
   getRepoSkillRoot,
   installSkillFiles,
+  launchClaudeInNewTerminal,
   listConversations,
   listHandoffs,
   loadAppConfig,
@@ -44,6 +46,34 @@ function printJson(value: unknown): void {
 
 function getPackageRoot(): string {
   return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+}
+
+async function resolveCopyOptions(
+  sourceRepoPath: string,
+  targetRepoPath: string,
+  requestedCopyMode?: CopyMode,
+  requestedConflictStrategy?: ConflictStrategy,
+): Promise<{
+  copyMode: CopyMode;
+  conflictStrategy: ConflictStrategy | null;
+}> {
+  const copyMode = requestedCopyMode ?? (await promptForCopyMode());
+  const targetClaudePath = path.join(targetRepoPath, '.claude');
+  const hasExistingClaudeDir = await pathExists(targetClaudePath);
+  const hasSupportedConflicts =
+    copyMode === 'none'
+      ? false
+      : await targetHasSupportedClaudeConflicts({
+          sourceRepoPath,
+          targetRepoPath,
+          mode: copyMode,
+        });
+  const conflictStrategy =
+    copyMode === 'none' || !hasExistingClaudeDir || !hasSupportedConflicts
+      ? null
+      : (requestedConflictStrategy ?? (await promptForConflictStrategy()));
+
+  return { copyMode, conflictStrategy };
 }
 
 async function resolveHandoffSelection(
@@ -184,24 +214,12 @@ program
       handoffs,
       commandOptions.handoffId,
     );
-    const copyMode =
-      (commandOptions.copy as CopyMode | undefined) ??
-      (await promptForCopyMode());
-    const targetClaudePath = path.join(targetRepoPath, '.claude');
-    const hasExistingClaudeDir = await pathExists(targetClaudePath);
-    const hasSupportedConflicts =
-      copyMode === 'none'
-        ? false
-        : await targetHasSupportedClaudeConflicts({
-            sourceRepoPath: selectedHandoff.sourceRepoPath,
-            targetRepoPath,
-            mode: copyMode,
-          });
-    const conflictStrategy =
-      copyMode === 'none' || !hasExistingClaudeDir || !hasSupportedConflicts
-        ? null
-        : ((commandOptions.conflictStrategy as ConflictStrategy | undefined) ??
-          (await promptForConflictStrategy()));
+    const { copyMode, conflictStrategy } = await resolveCopyOptions(
+      selectedHandoff.sourceRepoPath,
+      targetRepoPath,
+      commandOptions.copy as CopyMode | undefined,
+      commandOptions.conflictStrategy as ConflictStrategy | undefined,
+    );
 
     const summary = [
       'Apply handoff with these settings?',
@@ -244,6 +262,155 @@ program
     process.stdout.write(`${payload.instructionBlock}\n\n`);
     process.stdout.write(
       `Saved target payload to ${path.join(targetRepoPath, '.claude', 'context-handoffs')}\n`,
+    );
+  });
+
+program
+  .command('start')
+  .description(
+    'Save a handoff from the source repo, apply it in the target repo, and launch Claude Code in a new terminal window.',
+  )
+  .option('--source <path>', 'Source repository path', process.cwd())
+  .option('--target <path>', 'Target repository path')
+  .option('--label <label>', 'User label for the handoff')
+  .option('--session <id>', 'Explicit conversation session id to export')
+  .option('--latest', 'Use the latest conversation without prompting', false)
+  .option('--copy <mode>', 'Copy mode: none|skills|config|mcp|all', 'none')
+  .option(
+    '--conflict-strategy <strategy>',
+    'Conflict strategy: skip|overwrite|rename',
+  )
+  .option(
+    '--no-launch',
+    'Prepare and apply the handoff without opening a terminal window',
+  )
+  .option('--yes', 'Skip confirmation prompts', false)
+  .action(async (commandOptions, command) => {
+    if (!commandOptions.target) {
+      throw new Error('A target repository path is required for start.');
+    }
+
+    const sourceRepoPath = await resolveGitRoot(
+      path.resolve(commandOptions.source),
+    );
+    const targetRepoPath = await resolveGitRoot(
+      path.resolve(commandOptions.target),
+    );
+    const config = await loadAppConfig(sourceRepoPath);
+    await ensureExtractorAvailable(config.extractor);
+
+    const conversations = await listConversations(
+      sourceRepoPath,
+      config.extractor,
+    );
+    if (conversations.length === 0) {
+      throw new Error(
+        `No Claude Code conversations were found for ${sourceRepoPath}.`,
+      );
+    }
+
+    const selectedConversation = commandOptions.session
+      ? conversations.find(
+          (conversation) => conversation.id === commandOptions.session,
+        )
+      : commandOptions.latest
+        ? conversations[0]
+        : await promptForConversation(conversations);
+    if (!selectedConversation) {
+      throw new Error('Unable to resolve the requested conversation.');
+    }
+
+    const exportedConversation = await exportConversation(
+      sourceRepoPath,
+      selectedConversation.id,
+      config.extractor,
+    );
+    const label =
+      commandOptions.label ??
+      (await promptForLabel(
+        selectedConversation.label ?? selectedConversation.title,
+      ));
+    const sourceClaudeMdPath = await findSourceClaudeMd(sourceRepoPath);
+    const { copyMode, conflictStrategy } = await resolveCopyOptions(
+      sourceRepoPath,
+      targetRepoPath,
+      commandOptions.copy as CopyMode,
+      commandOptions.conflictStrategy as ConflictStrategy | undefined,
+    );
+
+    const summary = [
+      'Start a new target Claude session with these settings?',
+      `- source: ${sourceRepoPath}`,
+      `- target: ${targetRepoPath}`,
+      `- conversation: ${selectedConversation.title} (${selectedConversation.id})`,
+      `- label: ${label}`,
+      `- copy mode: ${copyMode}`,
+      `- conflict strategy: ${conflictStrategy ?? 'n/a'}`,
+      `- launch terminal: ${commandOptions.launch ? 'yes' : 'no'}`,
+    ].join('\n');
+    if (!commandOptions.yes && !(await promptForConfirmation(summary))) {
+      throw new Error('Aborted by user.');
+    }
+
+    const draftMetadata = await saveHandoff({
+      config,
+      sourceRepoPath,
+      targetRepoPath,
+      sourceClaudeMdPath,
+      label,
+      exportedConversation,
+    });
+    const transfer =
+      copyMode === 'none'
+        ? null
+        : await copyClaudeContent({
+            sourceRepoPath,
+            targetRepoPath,
+            mode: copyMode,
+            strategy: conflictStrategy,
+          });
+    const payload = await applyHandoff({
+      config,
+      metadata: await loadHandoff(config, draftMetadata.handoffId),
+      applyOptions: {
+        targetRepoPath,
+        handoffId: draftMetadata.handoffId,
+        copyMode,
+        conflictStrategy,
+      } satisfies ApplyOptions,
+      transfer,
+    });
+    const launchResult = commandOptions.launch
+      ? await launchClaudeInNewTerminal({
+          handoffId: payload.handoffId,
+          targetRepoPath,
+        })
+      : buildClaudeLaunchCommand({
+          handoffId: payload.handoffId,
+          targetRepoPath,
+        });
+
+    if (command.parent?.opts().json) {
+      printJson({
+        payload,
+        launch: launchResult,
+      });
+      return;
+    }
+
+    process.stdout.write(`${payload.instructionBlock}\n\n`);
+    process.stdout.write(
+      `Prepared target payload at ${launchResult.metadataPath}\n`,
+    );
+    if (launchResult.launched) {
+      process.stdout.write(
+        'Opened a new Terminal window and started Claude Code.\n',
+      );
+      return;
+    }
+
+    process.stdout.write(
+      `Run this command in the target repo to continue:\n${launchResult.command}\n`,
     );
   });
 

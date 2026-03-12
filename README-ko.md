@@ -72,6 +72,14 @@ npx github:sliver2er/claude-context-handoff-skill save --source /path/to/source-
 
 이 명령은 대화 목록을 보여 주고, 선택한 세션의 transcript와 메타데이터를 `~/.claude-context-handoff/handoffs/<handoff-id>/` 아래에 저장합니다.
 
+## 사용 방법: 타깃 레포에서 Claude 바로 시작
+
+```bash
+npx github:sliver2er/claude-context-handoff-skill start --source /path/to/source-repo --target /path/to/target-repo
+```
+
+이 명령은 handoff를 저장하고 타깃 레포에 적용한 뒤, macOS에서는 새 Terminal 창을 열어 타깃 저장소에서 Claude Code를 바로 시작합니다. Claude는 시작하자마자 handoff 메타데이터 파일을 먼저 읽도록 유도됩니다.
+
 ## 사용 방법: 타깃 저장소에서 handoff 적용
 
 ```bash
