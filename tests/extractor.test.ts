@@ -1,7 +1,7 @@
 /* MIT License - see LICENSE for details. */
 import os from 'node:os';
 import path from 'node:path';
-import { mkdtemp, writeFile } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -11,7 +11,65 @@ import {
 } from '../src/extractor.js';
 import type { ExtractorConfig } from '../src/types.js';
 
+function encodeRepoPathForClaudeProjects(repoPath: string): string {
+  return path.resolve(repoPath).replaceAll(/[:\\/]/g, '-');
+}
+
 describe('extractor adapter', () => {
+  it('lists and exports builtin Claude JSONL sessions adapted from claude-conversation-extractor', async () => {
+    const root = await mkdtemp(
+      path.join(os.tmpdir(), 'cch-builtin-extractor-'),
+    );
+    const sourceRepo = path.join(root, 'repo-a');
+    const projectsDir = path.join(root, '.claude', 'projects');
+    const projectDir = path.join(
+      projectsDir,
+      encodeRepoPathForClaudeProjects(sourceRepo),
+    );
+    await mkdir(sourceRepo, { recursive: true });
+    await mkdir(projectDir, { recursive: true });
+    await writeFile(
+      path.join(projectDir, 'session-1.jsonl'),
+      [
+        JSON.stringify({
+          type: 'user',
+          cwd: sourceRepo,
+          timestamp: '2026-03-12T00:00:00Z',
+          message: { role: 'user', content: 'Investigate auth bug' },
+        }),
+        JSON.stringify({
+          type: 'assistant',
+          cwd: sourceRepo,
+          timestamp: '2026-03-12T00:00:05Z',
+          message: {
+            role: 'assistant',
+            content: [{ type: 'text', text: 'I will inspect the auth flow.' }],
+          },
+        }),
+      ].join('\n'),
+      'utf8',
+    );
+
+    const config: ExtractorConfig = {
+      mode: 'builtin',
+      command: 'claude-conversation-extractor',
+      claudeProjectsDir: projectsDir,
+      listStrategies: [],
+      exportStrategies: [],
+    };
+
+    await ensureExtractorAvailable(config);
+    const conversations = await listConversations(sourceRepo, config);
+    const exported = await exportConversation(sourceRepo, 'session-1', config);
+
+    expect(conversations[0]?.id).toBe('session-1');
+    expect(conversations[0]?.title).toContain('Investigate auth bug');
+    expect(exported.transcriptMarkdown).toContain('Investigate auth bug');
+    expect(exported.transcriptMarkdown).toContain(
+      'I will inspect the auth flow.',
+    );
+  });
+
   it('supports configurable external extractor commands', async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), 'cch-extractor-'));
     const mockExtractor = path.join(root, 'mock-extractor.mjs');
@@ -37,7 +95,9 @@ process.exit(1);
     );
 
     const config: ExtractorConfig = {
+      mode: 'external',
       command: mockExtractor,
+      claudeProjectsDir: path.join(root, '.claude', 'projects'),
       listStrategies: [{ args: ['list', '--repo', '{repoPath}', '--json'] }],
       exportStrategies: [
         {

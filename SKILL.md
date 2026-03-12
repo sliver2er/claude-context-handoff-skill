@@ -3,13 +3,15 @@ name: claude-context-handoff-skill
 description: Use this skill when Claude needs to move Claude Code conversation context from one repository to another while preserving source/target paths, CLAUDE.md provenance, and optional .claude transfer metadata.
 ---
 
+[English](./SKILL.md) | [한국어](./SKILL-ko.md)
+
 # Claude Context Handoff Skill
 
 Use this skill when the user wants to continue work from one repository in another repository without losing where earlier context came from.
 
 ## What this skill does
 
-- Exports a Claude Code conversation from a source repository by calling an external `claude-conversation-extractor` CLI.
+- Exports a Claude Code conversation from a source repository using a built-in extractor adapted from `claude-conversation-extractor`, with optional external extractor mode for compatibility.
 - Saves durable handoff artifacts with transcript, summaries, source/target path metadata, and source `CLAUDE.md` provenance.
 - Applies a saved handoff inside a target repository and writes Claude-readable payload files into `.claude/context-handoffs/`.
 - Optionally copies supported `.claude/` content (`skills`, `config`, `mcp`) from source to target and records exactly what was copied, skipped, renamed, or needs manual review.
@@ -38,6 +40,8 @@ Optional configuration:
 
 - `CCH_EXTRACTOR_BIN`
 - `CCH_HANDOFF_HOME`
+- `CCH_EXTRACTOR_MODE`
+- `CCH_CLAUDE_PROJECTS_DIR`
 - `claude-context-handoff.config.json` for extractor command and argument strategies
 
 ## How to use the metadata

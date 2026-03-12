@@ -14,7 +14,9 @@ function buildConfig(root: string): AppConfig {
   return {
     handoffHome: path.join(root, 'handoffs'),
     extractor: {
+      mode: 'external',
       command: 'missing-extractor-binary',
+      claudeProjectsDir: path.join(root, '.claude', 'projects'),
       listStrategies: [],
       exportStrategies: [],
     },

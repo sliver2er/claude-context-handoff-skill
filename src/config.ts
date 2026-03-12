@@ -6,7 +6,9 @@ import { access, readFile } from 'node:fs/promises';
 import type { AppConfig, ExtractorConfig } from './types.js';
 
 const DEFAULT_EXTRACTOR_CONFIG: ExtractorConfig = {
+  mode: 'builtin',
   command: 'claude-conversation-extractor',
+  claudeProjectsDir: path.join(os.homedir(), '.claude', 'projects'),
   listStrategies: [
     { args: ['list', '--repo', '{repoPath}', '--json'] },
     { args: ['sessions', '--repo', '{repoPath}', '--json'] },
@@ -89,8 +91,15 @@ export async function loadAppConfig(startDir: string): Promise<AppConfig> {
       handoffHome,
       extractor: {
         ...DEFAULT_EXTRACTOR_CONFIG,
+        mode:
+          (process.env.CCH_EXTRACTOR_MODE as
+            | ExtractorConfig['mode']
+            | undefined) ?? DEFAULT_EXTRACTOR_CONFIG.mode,
         command:
           process.env.CCH_EXTRACTOR_BIN ?? DEFAULT_EXTRACTOR_CONFIG.command,
+        claudeProjectsDir:
+          process.env.CCH_CLAUDE_PROJECTS_DIR ??
+          DEFAULT_EXTRACTOR_CONFIG.claudeProjectsDir,
       },
     };
   }
@@ -101,10 +110,20 @@ export async function loadAppConfig(startDir: string): Promise<AppConfig> {
   return {
     handoffHome,
     extractor: {
+      mode:
+        (process.env.CCH_EXTRACTOR_MODE as
+          | ExtractorConfig['mode']
+          | undefined) ??
+        raw.extractor?.mode ??
+        DEFAULT_EXTRACTOR_CONFIG.mode,
       command:
         process.env.CCH_EXTRACTOR_BIN ??
         raw.extractor?.command ??
         DEFAULT_EXTRACTOR_CONFIG.command,
+      claudeProjectsDir:
+        process.env.CCH_CLAUDE_PROJECTS_DIR ??
+        raw.extractor?.claudeProjectsDir ??
+        DEFAULT_EXTRACTOR_CONFIG.claudeProjectsDir,
       listStrategies:
         raw.extractor?.listStrategies ??
         DEFAULT_EXTRACTOR_CONFIG.listStrategies,

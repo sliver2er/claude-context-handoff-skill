@@ -20,12 +20,16 @@ export interface ExportedConversation {
   summaryLong?: string | null;
 }
 
+export type ExtractorMode = 'builtin' | 'external' | 'auto';
+
 export interface ExtractorStrategy {
   args: string[];
 }
 
 export interface ExtractorConfig {
+  mode: ExtractorMode;
   command: string;
+  claudeProjectsDir: string;
   listStrategies: ExtractorStrategy[];
   exportStrategies: ExtractorStrategy[];
 }

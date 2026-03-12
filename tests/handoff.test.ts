@@ -20,7 +20,9 @@ function buildConfig(root: string): AppConfig {
   return {
     handoffHome: path.join(root, 'handoffs'),
     extractor: {
+      mode: 'builtin',
       command: 'mock-extractor',
+      claudeProjectsDir: path.join(root, '.claude', 'projects'),
       listStrategies: [],
       exportStrategies: [],
     },
