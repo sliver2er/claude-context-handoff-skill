@@ -11,10 +11,12 @@
   "files": [
     "dist",
     "SKILL.md",
+    "SKILL-ko.md",
     "agents",
     "examples",
     "LICENSE",
-    "README.md"
+    "README.md",
+    "README-ko.md"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",

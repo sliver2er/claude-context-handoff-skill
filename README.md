@@ -19,9 +19,20 @@ You can still switch to an external extractor binary through `CCH_EXTRACTOR_MODE
 ## Installation
 
 1. Prepare Node.js 20+ and `pnpm`.
-2. Clone this repository and install dependencies.
-3. Build the CLI.
-4. Place this repository at `~/.claude/skills/claude-context-handoff-skill`, or copy the root `SKILL.md` and `agents/` metadata with the bundled CLI.
+2. Install the skill in one command.
+3. If you want local development, clone this repository and install dependencies separately.
+
+```bash
+npx github:sliver2er/claude-context-handoff-skill install-skill --yes
+```
+
+To install into the current repository instead of the global Claude skills directory:
+
+```bash
+npx github:sliver2er/claude-context-handoff-skill install-skill --scope repo --repo . --yes
+```
+
+For local development:
 
 ```bash
 pnpm install
@@ -56,8 +67,7 @@ You can optionally define a `claude-context-handoff.config.json` file in the rep
 ## Usage: save a handoff from the source repo
 
 ```bash
-pnpm build
-node dist/cli.js save --source /path/to/source-repo
+npx github:sliver2er/claude-context-handoff-skill save --source /path/to/source-repo
 ```
 
 This command shows available conversations and stores the selected session transcript plus metadata under `~/.claude-context-handoff/handoffs/<handoff-id>/`.
@@ -65,7 +75,7 @@ This command shows available conversations and stores the selected session trans
 ## Usage: apply a handoff in the target repo
 
 ```bash
-node dist/cli.js apply --target /path/to/target-repo
+npx github:sliver2er/claude-context-handoff-skill apply --target /path/to/target-repo
 ```
 
 This command lets you choose a saved handoff and writes a Claude-ready JSON payload plus Markdown instruction file to `.claude/context-handoffs/` inside the target repository.

@@ -47,10 +47,11 @@
 
 ## 권장 워크플로우
 
-1. 소스 저장소에서 `node dist/cli.js save --source <source-repo>` 실행
-2. 타깃 저장소에서 `node dist/cli.js apply --target <target-repo>` 실행
-3. `.claude/context-handoffs/<handoff-id>.json`과 `.md` 확인
-4. 새 Claude 대화 시작 시 `instructionBlock`을 앞에 붙이거나 요약해서 사용
+1. `npx github:sliver2er/claude-context-handoff-skill install-skill --yes`로 스킬 설치
+2. 소스 저장소에서 `npx github:sliver2er/claude-context-handoff-skill save --source <source-repo>` 실행
+3. 타깃 저장소에서 `npx github:sliver2er/claude-context-handoff-skill apply --target <target-repo>` 실행
+4. `.claude/context-handoffs/<handoff-id>.json`과 `.md` 확인
+5. 새 Claude 대화 시작 시 `instructionBlock`을 앞에 붙이거나 요약해서 사용
 
 ## 예시 발화
 

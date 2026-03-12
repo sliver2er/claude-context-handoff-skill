@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 /* MIT License - see LICENSE for details. */
+import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
 import { Command } from 'commander';
@@ -10,6 +11,9 @@ import {
   ensureExtractorAvailable,
   exportConversation,
   findSourceClaudeMd,
+  getGlobalSkillRoot,
+  getRepoSkillRoot,
+  installSkillFiles,
   listConversations,
   listHandoffs,
   loadAppConfig,
@@ -36,6 +40,10 @@ import {
 
 function printJson(value: unknown): void {
   process.stdout.write(`${JSON.stringify(value, null, 2)}\n`);
+}
+
+function getPackageRoot(): string {
+  return path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 }
 
 async function resolveHandoffSelection(
@@ -246,6 +254,57 @@ program
     const config = await loadAppConfig(process.cwd());
     const handoffs = await listHandoffs(config);
     printJson(handoffs);
+  });
+
+program
+  .command('install-skill')
+  .description(
+    'Install this skill into ~/.claude/skills or the current repository .claude/skills.',
+  )
+  .option('--scope <scope>', 'Install scope: global|repo', 'global')
+  .option(
+    '--repo <path>',
+    'Repository path for repo-scoped installation',
+    process.cwd(),
+  )
+  .option('--force', 'Replace an existing installed skill', false)
+  .option('--yes', 'Skip confirmation prompts', false)
+  .action(async (commandOptions, command) => {
+    const scope = commandOptions.scope as 'global' | 'repo';
+    if (scope !== 'global' && scope !== 'repo') {
+      throw new Error(`Unsupported install scope: ${commandOptions.scope}`);
+    }
+
+    const destinationRoot =
+      scope === 'global'
+        ? getGlobalSkillRoot()
+        : getRepoSkillRoot(
+            await resolveGitRoot(path.resolve(commandOptions.repo)),
+          );
+    const summary = [
+      'Install skill with these settings?',
+      `- scope: ${scope}`,
+      `- destination: ${destinationRoot}`,
+      `- package root: ${getPackageRoot()}`,
+      `- force replace: ${commandOptions.force ? 'yes' : 'no'}`,
+    ].join('\n');
+    if (!commandOptions.yes && !(await promptForConfirmation(summary))) {
+      throw new Error('Aborted by user.');
+    }
+
+    const result = await installSkillFiles({
+      packageRoot: getPackageRoot(),
+      destinationRoot,
+      scope,
+      force: commandOptions.force,
+    });
+
+    if (command.parent?.opts().json) {
+      printJson(result);
+      return;
+    }
+
+    process.stdout.write(`Installed skill to ${result.installDir}\n`);
   });
 
 program.parseAsync(process.argv).catch((error: unknown) => {

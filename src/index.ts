@@ -13,6 +13,11 @@ export {
   listConversations,
 } from './extractor.js';
 export {
+  getGlobalSkillRoot,
+  getRepoSkillRoot,
+  installSkillFiles,
+} from './install.js';
+export {
   copyClaudeContent,
   targetHasSupportedClaudeConflicts,
 } from './transfer.js';

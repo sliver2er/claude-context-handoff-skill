@@ -57,10 +57,11 @@ When the tool returns or writes handoff metadata:
 
 ## Recommended workflow
 
-1. In the source repo, run `node dist/cli.js save --source <source-repo>`.
-2. In the target repo, run `node dist/cli.js apply --target <target-repo>`.
-3. Read `.claude/context-handoffs/<handoff-id>.json` and `.md`.
-4. Prepend or summarize the `instructionBlock` when starting the new Claude conversation.
+1. Install the skill with `npx github:sliver2er/claude-context-handoff-skill install-skill --yes`.
+2. In the source repo, run `npx github:sliver2er/claude-context-handoff-skill save --source <source-repo>`.
+3. In the target repo, run `npx github:sliver2er/claude-context-handoff-skill apply --target <target-repo>`.
+4. Read `.claude/context-handoffs/<handoff-id>.json` and `.md`.
+5. Prepend or summarize the `instructionBlock` when starting the new Claude conversation.
 
 ## Example user utterances
 

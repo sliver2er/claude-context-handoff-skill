@@ -19,9 +19,20 @@
 ## 설치
 
 1. Node.js 20+와 `pnpm`을 준비합니다.
-2. 저장소를 클론한 뒤 의존성을 설치합니다.
-3. CLI를 빌드합니다.
-4. 이 저장소 전체를 `~/.claude/skills/claude-context-handoff-skill`로 두거나, 루트의 `SKILL.md`와 `agents/` 메타데이터를 포함해 복사합니다.
+2. 한 번의 명령으로 스킬을 설치합니다.
+3. 로컬 개발이 필요하면 별도로 이 저장소를 클론해 의존성을 설치합니다.
+
+```bash
+npx github:sliver2er/claude-context-handoff-skill install-skill --yes
+```
+
+글로벌 Claude 스킬 디렉터리 대신 현재 레포의 `.claude/skills`에 설치하려면:
+
+```bash
+npx github:sliver2er/claude-context-handoff-skill install-skill --scope repo --repo . --yes
+```
+
+로컬 개발용으로는:
 
 ```bash
 pnpm install
@@ -56,8 +67,7 @@ pnpm build
 ## 사용 방법: 소스 저장소에서 handoff 저장
 
 ```bash
-pnpm build
-node dist/cli.js save --source /path/to/source-repo
+npx github:sliver2er/claude-context-handoff-skill save --source /path/to/source-repo
 ```
 
 이 명령은 대화 목록을 보여 주고, 선택한 세션의 transcript와 메타데이터를 `~/.claude-context-handoff/handoffs/<handoff-id>/` 아래에 저장합니다.
@@ -65,7 +75,7 @@ node dist/cli.js save --source /path/to/source-repo
 ## 사용 방법: 타깃 저장소에서 handoff 적용
 
 ```bash
-node dist/cli.js apply --target /path/to/target-repo
+npx github:sliver2er/claude-context-handoff-skill apply --target /path/to/target-repo
 ```
 
 이 명령은 저장된 handoff를 고르게 하고, Claude가 새 대화에서 읽을 수 있는 JSON payload와 Markdown instruction 파일을 타깃 저장소의 `.claude/context-handoffs/`에 기록합니다.
